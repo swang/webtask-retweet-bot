@@ -8,16 +8,17 @@ const Twitter = require('twitter')
 
 // const container = 'wt-shuanwang-gmail_com-0';
 
-function tweetFilter(tweet) {
+let tweetFilter = (tweet) => {
   const dur = (new Date() - +new Date(tweet.created_at)) / 1000 / (60 * 60)
-  return /t\.co/i.test(tweet.text) && dur < 1
+  const urls = tweet.text.match(/https:\/\/t\.co.*?(\w+|$)/g)
+  return /t\.co/i.test(tweet.text) && dur < 1 && urls
 }
 
 const T = new Twitter({
-    consumer_key: 'DQkGOhjDwtr33nqdAcUvVshZJ'
-  , consumer_secret: 'lf4LxpuOJvc1ufyS7qr5FeZoQTrI3ylAlj4AlNjxha6qT3Ze4E'
-  , access_token_key: '4022696420-jClAJyzp3fZFX4T54yDTWjHferyvmE7mLYqeTSw'
-  , access_token_secret: 'uqanxpdRW1QnzAAI4vSVTYDsd18qMLd5RH2XBwaFQX4Fi'
+  consumer_key: '',
+  consumer_secret: '',
+  access_token_key: '',
+  access_token_secret: ''
 })
 
 const tlParams = {
@@ -27,27 +28,32 @@ const tlParams = {
   include_rts: false
 }
 
-T.get('statuses/user_timeline/', tlParams, function(_e, tweets) {
-  tweets.filter(tweetFilter).forEach(function(t) {
-    let urls = t.text.match(/https:\/\/t\.co.*?(\w+|$)/g)
-    if (urls) {
-      async.detect(urls, function(uri, cb) {
-        request.head({ uri: uri, followRedirect: false }, function(__e, r) {
+module.exports = (callback) => {
+  T.get('statuses/user_timeline/', tlParams, (_e, tweets) => {
+    async.each(tweets.filter(tweetFilter), (t) => {
+      let urls = t.text.match(/https:\/\/t\.co.*?(\w+|$)/g)
+      async.detect(urls, (uri, cb) => {
+        request.head({ uri: uri, followRedirect: false }, (__e, r) => {
           if (__e) {
-            console.log('Error fetching uri ' + uri + ':', __e)
+            callback('Error fetching uri ' + uri + ':', __e)
           }
           cb((r.headers.location && r.headers.location.match(/angryasianman\.com/)))
         })
-      }, function callback(result) {
+      }, (result) => {
         if (t.text && result) {
-          T.post('statuses/retweet/' + t.id_str, { trim_user: 1 }, function(___e, rt) {
+          T.post('statuses/retweet/' + t.id_str, { trim_user: 1 }, (___e, rt) => {
             console.log('Retweeted ' + t.id_str + ': ' + rt)
             if (___e) {
-              console.log('Error retweeting id ' + t.id_str + ':', ___e)
+              return callback('Error retweeting id ' + t.id_str + ':', ___e)
             }
           })
         }
       })
-    }
+    }, (err) => {
+      if (err) {
+        return callback(err);
+      }
+      callback(null, 'OK')
+    })
   })
-})
+}
