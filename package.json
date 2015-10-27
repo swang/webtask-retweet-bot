@@ -1,0 +1,20 @@
+{
+  "name": "webtask-retweet-bot",
+  "version": "1.0.0",
+  "description": "webtask retweet bot",
+  "main": "lib/retweet.js",
+  "scripts": {
+    "test": "npm run compile && node ./node_modules/tap/bin/run.js ./lib/tests/*.js",
+    "babel-watch": "babel src --watch --out-dir lib",
+    "compile": "babel src --out-dir lib",
+    "preversion": "npm test",
+    "prepublish": "npm run compile && npm test",
+    "postpublish": "rm -rf ./lib/*.js && rm -rf ./lib/tests/*.js"
+  },
+  "author": "Shuan Wang",
+  "license": "ISC",
+  "devDependencies": {
+    "babel": "~5.8.23",
+    "tap": "~1.4.1"
+  }
+}
